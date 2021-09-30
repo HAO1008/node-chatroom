@@ -146,7 +146,7 @@ export default {
       socket.emit("sendRoom", id);
     },
     // 接收更新圖片
-    receiveSocketFriendImg() {
+    receiveSocketImg() {
       socket.on("toChange", () => {
         this.getUser()
         this.getFriend();
@@ -165,7 +165,7 @@ export default {
     this.socketJoin(this.user_id);
   },
   mounted() {
-    this.receiveSocketFriendImg();
+    this.receiveSocketImg();
   },
 };
 </script>
