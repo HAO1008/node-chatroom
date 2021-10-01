@@ -17,14 +17,14 @@
     <div class="main">
       <div class="title">註冊畫面</div>
       <div class="inputs">
-        <input type="text" v-model="user" placeholder="請輸入用戶名"/>
+        <input type="text" v-model="user" placeholder="請輸入用戶名" />
         <input
           v-model="email"
           type="email"
           placeholder="請輸入電子郵件"
           @blur="isEmail"
         />
-        <input type="password" v-model="password" placeholder="請輸入密碼"/>
+        <input type="password" v-model="password" placeholder="請輸入密碼" />
         <button :class="[{ submit: isok }, { submit1: !isok }]" @click="submit">
           註冊
         </button>
@@ -35,7 +35,7 @@
 
 <script>
 import axios from "axios";
-import url from "../../public/js/url"
+import { api } from "../../public/js/url";
 
 export default {
   name: "SignIn",
@@ -50,23 +50,23 @@ export default {
   methods: {
     // 判斷信箱格式
     isEmail() {
-      let reg = /^\w+((.\w+)|(-\w+))@[A-Za-z0-9]+((.|-)[A-Za-z0-9]+).[A-Za-z0-9]+$/;
-
-      if (this.email.length > 0) {
-        // 如果格式正確
-        if (reg.test(this.email)) {
-          console.log("信箱格式正確");
-        } else {
-          alert("格式錯誤");
-        }
+      const reg = /^\w+((.\w+)|(-\w+))@[A-Za-z0-9]+((.|-)[A-Za-z0-9]+).[A-Za-z0-9]+$/;
+      if (!this.email.length > 0) {
+        alert("請輸入email");
+        return;
       }
+      if (!reg.test(this.email)) {
+        alert("格式錯誤");
+        return;
+      }
+      console.log("格式正確");
     },
     back() {
       this.$router.go(-1);
     },
     // 註冊
     async submit() {
-      let data = await axios.post( this.api + "/signup/add", {
+      const data = await axios.post(api + "/signup/add", {
         name: this.user,
         pwd: this.password,
         mail: this.email,
@@ -78,11 +78,6 @@ export default {
         this.$router.push("/");
       }
     },
-  },
-  computed: {
-    api() {
-      return url.url()
-    }
   },
   updated() {
     if (this.email && this.password.length > 6 && this.user) {

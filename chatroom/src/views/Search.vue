@@ -31,7 +31,7 @@
 
 <script>
 import axios from "axios";
-import url from "../../public/js/url"
+import { api } from "../../public/js/url";
 
 export default {
   name: "Search",
@@ -57,9 +57,9 @@ export default {
     },
     // 獲取緩存數據
     getStorages() {
-      var getData = localStorage.getItem("token");
-      var getDataString = JSON.parse(getData);
-      let store = getDataString[0];
+      const getData = localStorage.getItem("token");
+      const getDataString = JSON.parse(getData);
+      const store = getDataString[0];
       this.user_id = store.id;
       this.user_name = store.name;
       this.user_img = store.img;
@@ -70,37 +70,45 @@ export default {
     },
     // 搜尋用戶
     async searchUser() {
-      let { token } = this.getStorages();
-      let data = await axios.post( this.api + "/search/user", {
-        email: this.search,
-        token: token,
-      });
-      let result = data.data.result;
-      let status = data.data.status;
-      if (status == 200) {
-        if (result.length > 0) {
-          this.show = true;
-          this.userArr = result[0];
-          if (this.user_id === this.userArr.id) {
-            this.add = false;
-          } else {
-            this.add = true;
-          }
-        } else {
-          alert("信箱錯誤");
+      try {
+        const { token } = this.getStorages();
+        const res = await axios.post(api + "/search/user", {
+          email: this.search,
+          token: token,
+        });
+        const resData = res.data;
+        const result = resData.result;
+        const status = resData.status;
+        if (status != 200) {
+          alert("token錯誤");
+          this.$router.push({ name: "Relogin" });
+          return;
         }
-      } else {
-        alert("token錯誤");
-        this.$router.push("/logout");
+        if (!result.length > 0) {
+          alert("信箱錯誤");
+          return;
+        }
+        this.show = true;
+        this.userArr = result[0];
+        if (this.user_id !== this.userArr.id) {
+          this.add = true;
+          return;
+        }
+        this.add = false;
+      } catch (err) {
+        alert("請重新登入");
+        this.$router.push({ name: "Relogin" });
       }
     },
     // 加好友
     async addfriend() {
-      let { token } = this.getStorages();
-      if (this.add == false) {
-        alert("無法添加");
-      } else {
-        let data = await axios.post( this.api + "/add/user", {
+      try {
+        const { token } = this.getStorages();
+        if (this.add == false) {
+          alert("無法添加");
+          return;
+        }
+        const res = await axios.post(api + "/add/user", {
           user_id: this.user_id,
           user_name: this.user_name,
           user_img: this.user_img,
@@ -109,28 +117,23 @@ export default {
           friend_img: this.userArr.img,
           token: token,
         });
-        console.log(data);
-        let status = data.data.status;
+        const status = res.data.status;
         if (status == 400) {
           alert("token比對錯誤");
-          this.$router.push("/relogin");
-        } else {
-          if (status == 200) {
-            alert("添加好友成功");
-          } else if (status == 300) {
-            alert("已擁有好友");
-          } else {
-            alert("發生錯誤");
-            this.$router.push("/relogin");
-          }
+          this.$router.push({ name: "Relogin" });
+          return;
         }
+        if (status == 200) {
+          alert("添加好友成功");
+          location.reload()
+        } else if (status == 300) {
+          alert("已擁有好友");
+        }
+      } catch (err) {
+        alert("請重新登入");
+        this.$router.push({ name: "Relogin" });
       }
     },
-  },
-  computed: {
-    api() {
-      return url.url()
-    }
   },
   created() {
     this.getStorages();

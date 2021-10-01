@@ -21,16 +21,21 @@ function runQuery(sql, sqlParams) {
   });
 }
 
-async function opt1(a) {
-  var sql = "SELECT * FROM token where token = ? ";
-  var sqlParams = [a];
+async function inspect(a) {
+  const sql = "SELECT * FROM token where token = ? ";
+  const sqlParams = [a];
   const data = await runQuery(sql, sqlParams);
-  let id = data[0].user_id;
-
-  var sql1 = "SELECT * FROM user where id = ? ";
-  var sqlParams1 = [id];
+  const id = data[0].user_id;
+  if (data.length == 0) {
+    throw new Error("token not found");
+  }
+  const sql1 = "SELECT * FROM user where id = ? ";
+  const sqlParams1 = [id];
   const data1 = await runQuery(sql1, sqlParams1);
-  let uname = data1[0].name;
+  const uname = data1[0].name;
+  if (data1.length == 0) {
+    throw new Error("id not found");
+  }
 
   return {
     data: data,
@@ -42,9 +47,9 @@ async function opt1(a) {
 // 用戶註冊
 exports.buildUser = async function (name, mail, pwd, time, res) {
   try {
-    var addSql =
+    const addSql =
       " INSERT INTO user(name, password, email, created_at) VALUES(?, ?, ?, ?) ";
-    var addSqlParams = [name, pwd, mail, time];
+    const addSqlParams = [name, pwd, mail, time];
     const data = await runQuery(addSql, addSqlParams);
     res.send({ status: 200, data });
   } catch (err) {
@@ -55,10 +60,10 @@ exports.buildUser = async function (name, mail, pwd, time, res) {
 // 用戶登入
 exports.userMatch = async function (email, pwd, res) {
   try {
-    var token = uuidv4();
-    var addsql =
+    const token = uuidv4();
+    const addsql =
       " SELECT * FROM user where email = ? AND password = ? LIMIT 1 ";
-    var addSqlParams = [email, pwd];
+    const addSqlParams = [email, pwd];
     const data = await runQuery(addsql, addSqlParams);
     if (data.length == 0) {
       res.send({ status: 400 });
@@ -73,10 +78,10 @@ exports.userMatch = async function (email, pwd, res) {
 // 用戶搜尋
 exports.findUser = async function (email, token, res) {
   try {
-    const { data } = await opt1(token);
-    var sql1 = "SELECT * FROM user WHERE email = ?";
-    var sqlParams1 = [email];
-    const result = await runQuery(sql1, sqlParams1);
+    const { data } = await inspect(token);
+    const sql = "SELECT * FROM user WHERE email = ?";
+    const sqlParams = [email];
+    const result = await runQuery(sql, sqlParams);
     res.send({ data, result, status: 200 });
   } catch (err) {
     console.log(err.message);
@@ -87,10 +92,10 @@ exports.findUser = async function (email, token, res) {
 // 用戶資料
 exports.getUser = async function (token, res) {
   try {
-    const { data, id } = await opt1(token);
-    var sql2 = "SELECT * FROM user where id = ?";
-    var sqlParams2 = [id];
-    const result = await runQuery(sql2, sqlParams2);
+    const { data, id } = await inspect(token);
+    const sql = "SELECT * FROM user where id = ?";
+    const sqlParams = [id];
+    const result = await runQuery(sql, sqlParams);
     res.send({ status: 200, data, result });
   } catch (err) {
     console.log(err.message);
@@ -101,19 +106,21 @@ exports.getUser = async function (token, res) {
 // 用戶照片更新
 exports.imgUpdate = async function (img, friend_img, token, res) {
   try {
-    const { data, id } = await opt1(token);
-    var sql = "UPDATE user SET img = ? WHERE id = ?";
-    var sqlParams = [img, id];
+    const { data, id } = await inspect(token);
+    const sql = "UPDATE user SET img = ? WHERE id = ?";
+    const sqlParams = [img, id];
     const result = await runQuery(sql, sqlParams);
-    var sql1 = "UPDATE friend SET friend_img = ? WHERE friend_id = ?";
-    var sqlParams1 = [friend_img, id];
-    const fresult = await runQuery(sql1, sqlParams1);
+
+    const sql1 = "UPDATE friend SET friend_img = ? WHERE friend_id = ?";
+    const sqlParams1 = [friend_img, id];
+    const friend_result = await runQuery(sql1, sqlParams1);
+
     if (result.affectedRows == 1) {
       message.changeImg(id, friend_img);
+      res.send({ status: 200, data, result, friend_result });
     } else {
       res.send({ status: 400 });
     }
-    res.send({ status: 200, data, result, fresult });
   } catch (err) {
     console.log(err.message);
     res.send({ status: 400 });
@@ -123,10 +130,10 @@ exports.imgUpdate = async function (img, friend_img, token, res) {
 // 好友列表
 exports.getFriend = async function (token, res) {
   try {
-    const { data, id } = await opt1(token);
-    var sql2 = "SELECT * FROM friend where user_id = ?";
-    var sqlParams2 = [id];
-    const result = await runQuery(sql2, sqlParams2);
+    const { data, id } = await inspect(token);
+    const sql = "SELECT * FROM friend where user_id = ?";
+    const sqlParams = [id];
+    const result = await runQuery(sql, sqlParams);
     res.send({ data, result, status: 200 });
   } catch (err) {
     console.log(err.message);
@@ -145,16 +152,16 @@ exports.addFriend = async function (
   res
 ) {
   try {
-    const { data, id } = await opt1(token);
-    var sql1 = "SELECT * FROM friend where user_id = ? ";
-    var sqlParams1 = [id];
-    const result = await runQuery(sql1, sqlParams1);
-    const x = result.map((e) => e.friend_id).indexOf(friend_id);
-    if (x != -1) {
+    const { data, id } = await inspect(token);
+    const sql = "SELECT * FROM friend where user_id = ? ";
+    const sqlParams = [id];
+    const result = await runQuery(sql, sqlParams);
+    const findFriendId = result.map((e) => e.friend_id).indexOf(friend_id);
+    if (findFriendId != -1) {
       res.send({ status: 300, data, result });
     } else {
-      insertFriend(id, friend_id, friend_name, friend_img);
-      insertConfirm(friend_id, id, user_name, user_img);
+      await insertFriend(id, friend_id, friend_name, friend_img);
+      await insertConfirm(friend_id, id, user_name, user_img);
       res.send({ status: 200, data, result });
     }
   } catch (err) {
@@ -165,17 +172,17 @@ exports.addFriend = async function (
 
 // 好友加入-插入好友資料表
 async function insertFriend(user_id, friend_id, friend_name, friend_img) {
-  var sql2 =
+  const sql =
     "INSERT INTO friend(user_id, friend_id, friend_name, friend_img) VALUES(?, ?, ?, ?)";
-  var sqlParams2 = [user_id, friend_id, friend_name, friend_img];
-  const results = await runQuery(sql2, sqlParams2);
+  const sqlParams = [user_id, friend_id, friend_name, friend_img];
+  const results = await runQuery(sql, sqlParams);
 }
 // 好友加入-插入確認資料表
 async function insertConfirm(friend_id, user_id, user_name, user_img) {
-  var sql3 =
+  const sql =
     "INSERT INTO confirm(user_id, friend_id, friend_name, friend_img) VALUES(?, ?, ?, ?)";
-  var sqlParams3 = [friend_id, user_id, user_name, user_img];
-  const confrimUser = await runQuery(sql3, sqlParams3);
+  const sqlParams = [friend_id, user_id, user_name, user_img];
+  const confrimUser = await runQuery(sql, sqlParams);
 }
 
 // 訊息插入
@@ -188,22 +195,23 @@ exports.chatInsert = async function (
   res
 ) {
   try {
-    const { id, data, uname } = await opt1(token);
-    var sql1 =
+    const { id, data, uname } = await inspect(token);
+    const sql =
       "INSERT INTO message(user_id, user_name, msg, type, sendto, created_at) VALUES(?, ?, ?, ?, ?, ?)";
-    var sqlParams1 = [id, uname, msg, type, sendto, created_at];
-    const results = await runQuery(sql1, sqlParams1);
-    if (results.affectedRows == 1) {
-      if (type == 1) {
-        message.msg(id, msg, sendto);
-      } else if (type == 2) {
-        message.img(id, msg, sendto);
-      }
-    } else {
+    const sqlParams = [id, uname, msg, type, sendto, created_at];
+    const result = await runQuery(sql, sqlParams);
+
+    if (result.affectedRows != 1) {
       console.log("錯誤");
       res.send({ status: 400 });
+      return;
     }
-    res.send({ data, results, status: 200 });
+    if (type == 1) {
+      message.msg(id, msg, sendto);
+    } else if (type == 2) {
+      message.img(id, msg, sendto);
+    }
+    res.send({ data, result, status: 200 });
   } catch (err) {
     console.log(err.message);
     res.send({ status: 400 });
@@ -213,18 +221,10 @@ exports.chatInsert = async function (
 // 訊息列表
 exports.chatShow = async function (sendto, token, res) {
   try {
-    const { data, id } = await opt1(token);
-    var sql1 =
-      "SELECT * FROM message where sendto in (" +
-      id +
-      "," +
-      sendto +
-      ") and user_id in (" +
-      id +
-      " , " +
-      sendto +
-      ")";
-    const results = await runQuery(sql1);
+    const { data, id } = await inspect(token);
+    const sql =
+      `SELECT * FROM message where sendto in (${ id }, ${ sendto }) and user_id in (${ id }, ${ sendto })`;
+    const results = await runQuery(sql);
     res.send({ data, results, status: 200 });
   } catch (err) {
     console.log(err.message);
@@ -235,16 +235,16 @@ exports.chatShow = async function (sendto, token, res) {
 // 訊息收回
 exports.takeBack = async function (id, token, res) {
   try {
-    const { data } = await opt1(token);
-    var sql1 = "DELETE FROM message where id = ?";
-    var sqlParams1 = [id];
+    const { data } = await inspect(token);
+    const sql1 = "DELETE FROM message where id = ?";
+    const sqlParams1 = [id];
     const tb = await runQuery(sql1, sqlParams1);
     if (tb.affectedRows == 1) {
       message.tackBack(id);
+      res.send({ data, tb, status: 200 });
     } else {
       res.send({ status: 400 });
     }
-    res.send({ data, tb, status: 200 });
   } catch (err) {
     console.log(err.message);
     res.send({ status: 400 });
@@ -254,8 +254,9 @@ exports.takeBack = async function (id, token, res) {
 // token生成
 exports.createToken = async function (token, id, time, res) {
   try {
-    var sql = " INSERT INTO token(token, user_id, created_at) VALUES(?, ?, ?) ";
-    var sqlParams = [token, id, time];
+    const sql =
+      " INSERT INTO token(token, user_id, created_at) VALUES(?, ?, ?) ";
+    const sqlParams = [token, id, time];
     const data = await runQuery(sql, sqlParams);
     console.log("成功生成token");
     res.send({ status: 200 });
@@ -267,8 +268,8 @@ exports.createToken = async function (token, id, time, res) {
 // token移除
 exports.deleteToken = async function (user_id, res) {
   try {
-    var sql = "DELETE FROM token where user_id = ?";
-    var sqlParams = [user_id];
+    const sql = "DELETE FROM token where user_id = ?";
+    const sqlParams = [user_id];
     const data = await runQuery(sql, sqlParams);
     console.log("成功移除token");
     res.send({ status: 200 });
@@ -280,10 +281,10 @@ exports.deleteToken = async function (user_id, res) {
 // 邀請列表
 exports.confirmUser = async function (token, res) {
   try {
-    const { data, id } = await opt1(token);
-    var sql1 = "SELECT * FROM confirm where user_id = ? ";
-    var sqlParams1 = [id];
-    const result = await runQuery(sql1, sqlParams1);
+    const { data, id } = await inspect(token);
+    const sql = "SELECT * FROM confirm where user_id = ? ";
+    const sqlParams = [id];
+    const result = await runQuery(sql, sqlParams);
     res.send({ data, result, status: 200 });
   } catch (err) {
     console.log(err.message);
@@ -300,14 +301,14 @@ exports.handleApply = async function (
   res
 ) {
   try {
-    const { data, id } = await opt1(token);
-    let sql1 =
+    const { data, id } = await inspect(token);
+    const sql =
       "INSERT INTO friend(user_id, friend_id, friend_name, friend_img) VALUES(?, ?, ?, ?)";
-    let sqlParams1 = [id, friend_id, friend_name, friend_img];
-    const result = await runQuery(sql1, sqlParams1);
-    let sql2 = "DELETE FROM confirm where user_id = ? and friend_id = ?";
-    let sqlParams2 = [id, friend_id];
-    const del = await runQuery(sql2, sqlParams2);
+    const sqlParams = [id, friend_id, friend_name, friend_img];
+    const result = await runQuery(sql, sqlParams);
+    const sql1 = "DELETE FROM confirm where user_id = ? and friend_id = ?";
+    const sqlParams1 = [id, friend_id];
+    const del = await runQuery(sql1, sqlParams1);
     res.send({ data, result, del, status: 200 });
   } catch (err) {
     console.log(err.message);
@@ -318,22 +319,15 @@ exports.handleApply = async function (
 // 邀請拒絕
 exports.refuseApply = async function (friend_id, token, res) {
   try {
-    const { data, id } = await opt1(token);
-    let sql1 = "DELETE FROM confirm where user_id = ? and friend_id = ?";
-    let sqlParams1 = [id, friend_id];
-    const del = await runQuery(sql1, sqlParams1);
-    let sql2 =
-      "DELETE FROM friend where user_id in (" +
-      id +
-      "," +
-      friend_id +
-      ") and friend_id in (" +
-      id +
-      " , " +
-      friend_id +
-      ")";
-    const delfriend = await runQuery(sql2);
-    res.send({ data, del, delfriend, status: 200 });
+    const { data, id } = await inspect(token);
+    const sql = "DELETE FROM confirm where user_id = ? and friend_id = ?";
+    const sqlParams = [id, friend_id];
+    const del = await runQuery(sql, sqlParams);
+
+    const sql1 =
+      `DELETE FROM friend where user_id in (${ id }, ${ friend_id }) and friend_id in (${ id }, ${ friend_id })`;
+    const deleteFriend = await runQuery(sql1);
+    res.send({ data, del, deleteFriend, status: 200 });
   } catch (err) {
     console.log(err.message);
     res.send({ status: 400 });

@@ -29,7 +29,7 @@
 
 <script>
 import axios from "axios";
-import url from "../../public/js/url"
+import { api } from "../../public/js/url";
 
 export default {
   name: "Confirm",
@@ -49,9 +49,9 @@ export default {
     },
     // 獲取緩存數據
     getStorages() {
-      var getData = localStorage.getItem("token");
-      var getDataString = JSON.parse(getData);
-      let store = getDataString[0];
+      const getData = localStorage.getItem("token");
+      const getDataString = JSON.parse(getData);
+      const store = getDataString[0];
       this.user_id = store.id;
       this.user_name = store.name;
       this.user_img = store.img;
@@ -62,53 +62,63 @@ export default {
     },
     // 確認列表渲染
     async getConfirmList() {
-      let res = await axios.post( this.api + "/confirm/show", {
-        token: this.token,
-      });
-      let status = res.data.status;
-      if (status == 200) {
-        let result = res.data.result;
-        this.confirmList = result;
-      } else {
-        alert("token錯誤");
+      try {
+        const res = await axios.post(api + "/confirm/show", {
+          token: this.token,
+        });
+        const status = res.data.status;
+        if (status == 200) {
+          const result = res.data.result;
+          this.confirmList = result;
+        } else {
+          alert("token錯誤");
+          this.$router.push({ name: "Relogin" });
+        }
+      } catch (err) {
+        alert("請重新登入");
         this.$router.push({ name: "Relogin" });
       }
     },
     // 接受邀請
-    async handleApply(index) {
-      let { token } = this.getStorages();
-      let res = await axios.post( this.api + "/handle/apply", {
-        friend_id: index.friend_id,
-        friend_name: index.friend_name,
-        friend_img: index.friend_img,
-        token: token,
-      });
-      location.reload();
-      let status = res.data.status;
-      if (status != 200) {
-        alert("token錯誤");
+    async handleApply(item) {
+      try {
+        const { token } = this.getStorages();
+        const res = await axios.post(api + "/handle/apply", {
+          friend_id: item.friend_id,
+          friend_name: item.friend_name,
+          friend_img: item.friend_img,
+          token: token,
+        });
+        location.reload();
+        const status = res.data.status;
+        if (status != 200) {
+          alert("token錯誤");
+          this.$router.push({ name: "Relogin" });
+        }
+      } catch (err) {
+        alert("請重新登入");
         this.$router.push({ name: "Relogin" });
       }
     },
     // 拒絕請求
-    async refuseApply(index) {
-      let { token } = this.getStorages();
-      let res = await axios.post( this.api + "/refuse/apply", {
-        friend_id: index.friend_id,
-        token: token,
-      });
-      location.reload();
-      let status = res.data.status;
-      if (status != 200) {
-        alert("token錯誤");
+    async refuseApply(item) {
+      try {
+        const { token } = this.getStorages();
+        const res = await axios.post(api + "/refuse/apply", {
+          friend_id: item.friend_id,
+          token: token,
+        });
+        location.reload();
+        const status = res.data.status;
+        if (status != 200) {
+          alert("token錯誤");
+          this.$router.push({ name: "Relogin" });
+        }
+      } catch (err) {
+        alert("請重新登入");
         this.$router.push({ name: "Relogin" });
       }
     },
-  },
-  computed: {
-    api() {
-      return url.url()
-    }
   },
   created() {
     this.getStorages();

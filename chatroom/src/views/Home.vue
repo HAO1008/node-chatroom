@@ -50,7 +50,7 @@
 
 <script>
 import axios from "axios";
-import url from "../../public/js/url"
+import {api} from "../../public/js/url";
 import timefun from "../../public/js/timefun";
 import Personal from "../components/Personal.vue";
 
@@ -81,61 +81,74 @@ export default {
     search() {
       this.$router.push("/search");
     },
+    goConfirm() {
+      this.$router.push({ name: "Confirm" });
+    },
+    // 進入聊天室
     goChat(index) {
-      let friend = [
+      const friend = [
         {
           friend_name: index.friend_name,
           friend_img: index.friend_img,
           friend_id: index.friend_id,
         },
       ];
-      let friendString = JSON.stringify(friend);
+      const friendString = JSON.stringify(friend);
       localStorage.setItem("friend", friendString);
       this.$router.push("/chatroom/" + index.friend_id);
     },
-    goConfirm() {
-      this.$router.push({ name:'Confirm' });
-    },
     // 獲取緩存數據 - token
     getStorages() {
-      var getData = localStorage.getItem("token");
-      var getDataString = JSON.parse(getData);
-      let store = getDataString[0];
+      const getData = localStorage.getItem("token");
+      const getDataString = JSON.parse(getData);
+      const store = getDataString[0];
       this.token = store.token;
     },
     // 獲取好友資訊
     async getFriend() {
-      let res = await axios.post( this.api + "/home/getfriend", {
+      const res = await axios.post(api + "/home/getfriend", {
         token: this.token,
       });
-      let result = res.data.result;
-      let status = res.data.status;
+      const resData = res.data;
+      const result = resData.result;
+      const status = resData.status;
       if (status == 200) {
         this.friends = result;
       } else {
         alert("token比對錯誤");
-        this.$router.push({ name:'Relogin' })
+        this.$router.push({ name: "Relogin" });
       }
     },
     // 獲取用戶資訊
     async getUser() {
-      let res = await axios.post( this.api + "/home/getuser", {
-        token: this.token
-      })
-      let store = res.data.result[0]
-      let status = res.data.status
-      if (status == 200) {
-        this.user_id = store.id;
-        this.user_name = store.name;
-        this.img = store.img
-      } else {
-        alert("token比對錯誤")
-        this.$router.push( {name:'Relogin'} )
+      try {
+        const res = await axios.post(api + "/home/getuser", {
+          token: this.token,
+        });
+        const resData = res.data;
+        const store = resData.result[0];
+        const status = resData.status;
+        if (status == 200) {
+          this.user_id = store.id;
+          this.user_name = store.name;
+          this.img = store.img;
+        } else {
+          alert("token比對錯誤");
+          this.$router.push({ name: "Relogin" });
+        }
+      } catch (err) {
+        alert("請重新登入");
+        this.$router.push({ name: "Relogin" });
       }
     },
     // 子組件開關
     openPersonal() {
       this.flag = true;
+
+      if (localStorage.getItem("token") == null) {
+        alert("token錯誤");
+        this.$router.push({ name: "Relogin" });
+      }
     },
     // 子傳父關閉
     closePersonal(e) {
@@ -146,17 +159,12 @@ export default {
       socket.emit("sendRoom", id);
     },
     // 接收更新圖片
-    receiveSocketImg() {
+    receiveSocketFriendImg() {
       socket.on("toChange", () => {
-        this.getUser()
+        this.getUser();
         this.getFriend();
       });
     },
-  },
-  computed: {
-    api() {
-      return url.url()
-    }
   },
   created() {
     this.getStorages();
@@ -165,7 +173,7 @@ export default {
     this.socketJoin(this.user_id);
   },
   mounted() {
-    this.receiveSocketImg();
+    this.receiveSocketFriendImg();
   },
 };
 </script>

@@ -15,12 +15,18 @@ const routes = [
   {
     path: '/home',
     name: 'Home',
-    component: Home
+    component: Home,
+    meta: {
+      require: true
+    }
   },
   {
     path: '/search',
     name: 'Search',
-    component: Search
+    component: Search,
+    meta: {
+      require: true
+    }
   },
   {
     path: '/',
@@ -36,7 +42,10 @@ const routes = [
     path: '/chatroom/:router_id',
     props:true,
     name: 'Chatroom',
-    component: Chatroom
+    component: Chatroom,
+    meta: {
+      require: true
+    }
   },
   {
     path:'/logout',
@@ -46,7 +55,10 @@ const routes = [
   {
     path:'/confirm',
     name:'Confirm',
-    component: Confirm
+    component: Confirm,
+    meta: {
+      require: true
+    }
   },
   {
     path:'/relogin',
@@ -59,6 +71,16 @@ const router = new VueRouter({
   mode: 'history',
   base: process.env.BASE_URL,
   routes
+})
+
+router.beforeEach((to, from, next) => {
+  if (to.meta.require) {
+    if(localStorage.getItem("token") == null) {
+      alert('請重新登入');
+      next({ name:"Relogin" })
+    }
+  }
+  next()
 })
 
 export default router

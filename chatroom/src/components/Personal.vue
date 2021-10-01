@@ -13,7 +13,7 @@
 
 <script>
 import axios from "axios";
-import url from "../../public/js/url";
+import { api } from "../../public/js/url";
 
 // socket
 import io from "socket.io-client";
@@ -37,9 +37,9 @@ export default {
     },
     // 獲取緩存數據
     getStorages() {
-      var getData = localStorage.getItem("token");
-      var getDataString = JSON.parse(getData);
-      let store = getDataString[0];
+      const getData = localStorage.getItem("token");
+      const getDataString = JSON.parse(getData);
+      const store = getDataString[0];
       this.email = store.email;
       this.id = store.id;
       this.img = store.img;
@@ -49,8 +49,8 @@ export default {
     },
     // 圖片上傳 64base
     uploadImg(e) {
-      let file = e.target.files[0];
-      let reader = new FileReader();
+      const file = e.target.files[0];
+      const reader = new FileReader();
       reader.onload = () => {
         this.updateImg(reader.result);
       };
@@ -60,21 +60,22 @@ export default {
     // 更新使用者後端圖片
     async updateImg(src) {
       const { token } = this.getStorages();
-      let data = await axios.post(this.api + "/img/update", {
+      const res = await axios.post(api + "/img/update", {
         img: src,
         friend_img: src,
         token: token,
       });
-      let status = data.data.status;
+      let status = res.data.status;
       if (status != 200) {
         alert("token錯誤");
         this.$router.push("/relogout");
+        return;
       }
       // 更新localstorage數據
-      var getData = localStorage.getItem("token");
-      var getDataString = JSON.parse(getData);
-      let store = getDataString[0];
-      let list = [
+      const getData = localStorage.getItem("token");
+      const getDataString = JSON.parse(getData);
+      const store = getDataString[0];
+      const list = [
         {
           email: store.email,
           id: store.id,
@@ -84,14 +85,9 @@ export default {
           token: store.token,
         },
       ];
-      var listString = JSON.stringify(list);
+      const listString = JSON.stringify(list);
       localStorage.removeItem("token");
       localStorage.setItem("token", listString);
-    },
-  },
-  computed: {
-    api() {
-      return url.url();
     },
   },
   created() {

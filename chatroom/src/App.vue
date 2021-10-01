@@ -11,44 +11,53 @@
 
 <script>
 import axios from "axios";
+import { api } from "../public/js/url";
+
 export default {
   data() {
     return {
       flag: true,
       user_id: "",
-      zero: 0,
     };
   },
   methods: {
     // 獲取緩存數據
     getStorages() {
-      var getData = localStorage.getItem("token");
-      var getDataString = JSON.parse(getData);
-      let store = getDataString[this.zero];
+      const getData = localStorage.getItem("token");
+      const getDataString = JSON.parse(getData);
+      const store = getDataString[0];
       this.user_id = store.id;
     },
     // 移除token
     async remove() {
-      let data = await axios.post("http://192.168.1.102:3000/token/delete", {
-        user_id: this.user_id,
-      });
-      console.log(data);
-      localStorage.removeItem("token");
-      localStorage.removeItem("friend");
-      this.$router.push("/logout");
-      location.reload();
+      try {
+        const res = await axios.post(api + "/token/delete", {
+          user_id: this.user_id,
+        });
+        localStorage.removeItem("token");
+        localStorage.removeItem("friend");
+        this.$router.push("/logout");
+        location.reload();
+      } catch (err) {
+        alert("請重新登入");
+        this.$router.push({ name: "Relogin" });
+      }
     },
   },
   mounted() {
     // 變更flag login/logout
-    if (localStorage.getItem("token") != undefined) {
+    if (localStorage.getItem("token") != null) {
       this.flag = false;
     } else {
       this.flag = true;
     }
   },
   created() {
-    this.getStorages();
+    if (localStorage.getItem("token") == null) {
+      console.log("請登入");
+    } else {
+      this.getStorages();
+    }
   },
 };
 </script>
